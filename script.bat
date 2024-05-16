@@ -1,6 +1,7 @@
 cd servlet
-javac -d . *.java
 
-jar -cvf FrontController.jar servlet/FrontController.class
+javac -d ./bin *.java
+
+jar -cvf FrontController.jar -C ./bin .
 
 pause
