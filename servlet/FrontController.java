@@ -66,7 +66,7 @@ public class FrontController extends HttpServlet {
     protected void processRequest(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         response.setContentType("text/plain");
         
-        /**************** Affficher contrôleurs  ****************/
+        /**************** Affficher contrôleurs  ****************/        
         String url_typed = request.getRequestURL().toString();
         PrintWriter out = response.getWriter();
         out.println("Liste des contrôleurs : ");
@@ -79,15 +79,27 @@ public class FrontController extends HttpServlet {
         /**************** Affficher methode associée  ****************/
         String link = Util.getWords(url_typed, 4);  // prendre l'url a partir du 4eme "/"
         link = "/" + link;
-        String link_result = Util.findTheRightMethod(link, this.urlMapping); // prendre value de l'annotation  
+        String link_result = Util.findTheRightMethod(link, this.urlMapping); // prendre value de l'annotation        
 
         if( link_result != null ){
             String className = Util.getWordAfterNthSlash(link_result, 3);
-            String methodName = Util.getWordAfterNthSlash(link_result, 4);
+            String methodName = Util.getWordAfterNthSlash(link_result, 4);            
 
             out.println("Link typed : " + link);   
             out.println("Class name : " + className);   
-            out.println("Method name : " + methodName);   
+            out.println("Method name : " + methodName);
+
+            try{
+                Class<?> classeCible = Class.forName( this.controller_package + "." + className);            
+                Method maMethode = classeCible.getMethod(methodName);
+                Object instance = classeCible.newInstance();
+                String resultat = (String)maMethode.invoke(instance);
+                out.println("Method return : " + resultat);
+            }catch(Exception e ){
+                out.println(e);
+            }
+
+
         }else{ out.println("Il n'y a pas de methode associée a cet url"); }
     }
 
