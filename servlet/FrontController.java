@@ -93,8 +93,10 @@ public class FrontController extends HttpServlet {
                 Class<?> classeCible = Class.forName( this.controller_package + "." + className);            
                 Method maMethode = classeCible.getMethod(methodName);
                 Object instance = classeCible.newInstance();
-                String resultat = (String)maMethode.invoke(instance);
-                out.println("Method return : " + resultat);
+
+                Object result = maMethode.invoke(instance);
+                
+                Util.dispatchData(result, response, request, out);
             }catch(Exception e ){
                 out.println(e);
             }

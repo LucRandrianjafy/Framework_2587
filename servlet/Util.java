@@ -3,6 +3,11 @@ package util;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.*;
+
 import java.util.*;
 
 import java.net.URL;
@@ -109,6 +114,22 @@ public class Util{
             }
         }
         return null;
+    }
+
+    public static void dispatchData (Object result , HttpServletResponse response, HttpServletRequest request,  PrintWriter out)  throws ServletException, IOException{
+        if( result instanceof String ){                    
+            out.println("Method return : " + (String) result);
+        }else if( result instanceof ModelView ){            
+            ModelView mv = ((ModelView) result);
+            for (Map.Entry<String, Object> entry : mv.getData().entrySet()) {
+                request.setAttribute(entry.getKey(), entry.getValue());
+            }              
+            RequestDispatcher dispatcher = request.getRequestDispatcher(mv.getUrl());
+            dispatcher.forward(request, response);
+
+        }else{
+            out.println("Another type return");
+        }
     }
 
 }
