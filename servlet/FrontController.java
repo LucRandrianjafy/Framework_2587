@@ -32,8 +32,8 @@ public class FrontController extends HttpServlet {
 
             /**************** Prendre tout les contrôleurs  ****************/
             ServletContext context = config.getServletContext();
-            this.controller_package = context.getInitParameter("base_package");     // nom package des contrôleurs dans web.xml 
-            this.listeController = Util.getControllerClasses(controller_package);   // appel du fonction
+            this.controller_package = context.getInitParameter("base_package");     // nom package des contrôleurs dans web.xml         
+            this.listeController = Util.getControllerClasses(controller_package);   // appel du fonction                     
 
             /**************** Creation urlMapping  ****************/
             String controllerName = ""; 
@@ -41,22 +41,28 @@ public class FrontController extends HttpServlet {
             List<Method> listMethod = new ArrayList<>();
 
             // ajouter dans urlMapping(annotation.value, Mapping) 
-            for (Class clazz : this.listeController) {
-                controllerName = clazz.getSimpleName();
-                listMethod.addAll( Util.findMethodsWithAnnotation(clazz));  //obtention des methodes annotées
+            if( this.listeController != null ){
+                for (Class clazz : this.listeController) {
+                    controllerName = clazz.getSimpleName();
+                    listMethod.addAll( Util.findMethodsWithAnnotation(clazz));  //obtention des methodes annotées
 
-                // prendre les methodName et value de l'annotation
-                for (Method method : listMethod) {
-                    methodName = method.getName();
+                    // prendre les methodName et value de l'annotation
+                    for (Method method : listMethod) {
+                        methodName = method.getName();
 
-                    // value de l'annotation
-                    Get getAnnotation = method.getAnnotation(Get.class);
-                    String url = getAnnotation.value(); 
+                        // value de l'annotation
+                        Get getAnnotation = method.getAnnotation(Get.class);
+                        String url = getAnnotation.value(); 
 
-                    this.urlMapping.put(url, new Mapping(controllerName, methodName));  //ajout dans urlMapping
+                        if (urlMapping.containsKey(url)) {                        
+                            throw new IllegalArgumentException("Duplicate URL in urlMapping : " + url);
+                        } else {
+                            this.urlMapping.put(url, new Mapping(controllerName, methodName));
+                        }
+                    }
+                    // effacer les donnees 
+                    listMethod.clear();
                 }
-                // effacer les donnees 
-                listMethod.clear();
             }
         }catch( Exception e ){
             e.printStackTrace();
@@ -67,29 +73,31 @@ public class FrontController extends HttpServlet {
         response.setContentType("text/plain");
         
         /**************** Affficher contrôleurs  ****************/        
-        String url_typed = request.getRequestURL().toString();
-        PrintWriter out = response.getWriter();
-        out.println("Liste des contrôleurs : ");
-        for (Class<?> controllerClass : this.listeController) {
-            out.println(controllerClass.getName());
-        }
-    
-        out.println("\n");    
+        try{
+            String url_typed = request.getRequestURL().toString();
+            PrintWriter out = response.getWriter();
+            out.println("Liste des contrôleurs : ");
+            if( this.listeController != null ){
+                for (Class<?> controllerClass : this.listeController) {
+                    out.println(controllerClass.getName());
+                }
+            }
+        
+            out.println("\n");
 
-        /**************** Affficher methode associée  ****************/
-        String link = Util.getWords(url_typed, 4);  // prendre l'url a partir du 4eme "/"
-        link = "/" + link;
-        String link_result = Util.findTheRightMethod(link, this.urlMapping); // prendre value de l'annotation        
+            /**************** Affficher methode associée  ****************/
+            String link = Util.getWords(url_typed, 4);  // prendre l'url a partir du 4eme "/"
+            link = "/" + link;
+            String link_result = Util.findTheRightMethod(link, this.urlMapping); // prendre value de l'annotation        
 
-        if( link_result != null ){
-            String className = Util.getWordAfterNthSlash(link_result, 3);
-            String methodName = Util.getWordAfterNthSlash(link_result, 4);            
+            if( link_result != null ){
+                String className = Util.getWordAfterNthSlash(link_result, 3);
+                String methodName = Util.getWordAfterNthSlash(link_result, 4);            
 
-            out.println("Link typed : " + link);   
-            out.println("Class name : " + className);   
-            out.println("Method name : " + methodName);
+                out.println("Link typed : " + link);
+                out.println("Class name : " + className);
+                out.println("Method name : " + methodName);
 
-            try{
                 Class<?> classeCible = Class.forName( this.controller_package + "." + className);            
                 Method maMethode = classeCible.getMethod(methodName);
                 Object instance = classeCible.newInstance();
@@ -97,12 +105,12 @@ public class FrontController extends HttpServlet {
                 Object result = maMethode.invoke(instance);
                 
                 Util.dispatchData(result, response, request, out);
-            }catch(Exception e ){
-                out.println(e);
             }
+        }catch(Exception e ){
+            response.getWriter().write(e.getMessage());
+        }            
 
-
-        }else{ out.println("Il n'y a pas de methode associée a cet url"); }
+        
     }
 
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {

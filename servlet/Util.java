@@ -42,7 +42,11 @@ public class Util{
             controllers.addAll(findClasses(directory, packageName));
         }
 
-        return controllers;
+        if(dirs.size() == 0 ){
+            throw new IllegalArgumentException("Package name doesn't exist ");
+        }else{
+            return controllers;
+        }
     }
 
     private static List<Class<?>> findClasses(File directory, String packageName) throws ClassNotFoundException {
@@ -113,7 +117,7 @@ public class Util{
                 return link + "/" + mapping.getClassName() + "/" + mapping.getMethodName();
             }
         }
-        return null;
+        throw new IllegalArgumentException("URL not found");        
     }
 
     public static void dispatchData (Object result , HttpServletResponse response, HttpServletRequest request,  PrintWriter out)  throws ServletException, IOException{
@@ -128,7 +132,7 @@ public class Util{
             dispatcher.forward(request, response);
 
         }else{
-            out.println("Another type return");
+            throw new IllegalArgumentException("Another type return");
         }
     }
 
