@@ -50,6 +50,8 @@ public class FrontController extends HttpServlet {
                     for (Method method : listMethod) {
                         methodName = method.getName();
 
+                        Class[] parameterTypes = method.getParameterTypes();
+
                         // value de l'annotation
                         Get getAnnotation = method.getAnnotation(Get.class);
                         String url = getAnnotation.value(); 
@@ -57,7 +59,7 @@ public class FrontController extends HttpServlet {
                         if (urlMapping.containsKey(url)) {                        
                             throw new IllegalArgumentException("Duplicate URL in urlMapping : " + url);
                         } else {
-                            this.urlMapping.put(url, new Mapping(controllerName, methodName));
+                            this.urlMapping.put(url, new Mapping(controllerName, methodName, parameterTypes));
                         }
                     }
                     // effacer les donnees 
@@ -73,22 +75,35 @@ public class FrontController extends HttpServlet {
         response.setContentType("text/plain");
         
         /**************** Affficher contrôleurs  ****************/        
-        try{
+        try{            
+
             String url_typed = request.getRequestURL().toString();
             PrintWriter out = response.getWriter();
+            
+            out.println("url_typed : " + url_typed);                        
+
             out.println("Liste des contrôleurs : ");
             if( this.listeController != null ){
                 for (Class<?> controllerClass : this.listeController) {
                     out.println(controllerClass.getName());
                 }
-            }
-        
+            }        
+
             out.println("\n");
 
             /**************** Affficher methode associée  ****************/
             String link = Util.getWords(url_typed, 4);  // prendre l'url a partir du 4eme "/"
             link = "/" + link;
-            String link_result = Util.findTheRightMethod(link, this.urlMapping); // prendre value de l'annotation        
+
+            String link_result = Util.findTheRightMethod(link, this.urlMapping); // prendre value de l'annotation  
+            out.println("link result " + link_result);
+
+            Mapping mapping = Util.getMapping(link, this.urlMapping); // prendre mapping
+
+            out.println("Liste des methodes : ");
+            for (Mapping m : this.urlMapping.values()) {
+                out.println(m.getMethodName());
+            }
 
             if( link_result != null ){
                 String className = Util.getWordAfterNthSlash(link_result, 3);
@@ -99,13 +114,15 @@ public class FrontController extends HttpServlet {
                 out.println("Method name : " + methodName);
 
                 Class<?> classeCible = Class.forName( this.controller_package + "." + className);            
-                Method maMethode = classeCible.getMethod(methodName);
+                Method maMethode = classeCible.getMethod(methodName, mapping.getParameterTypes());
                 Object instance = classeCible.newInstance();
 
-                Object result = maMethode.invoke(instance);
+                Object[] params = Util.getMethodParams(maMethode, request);
+                Object result = maMethode.invoke(instance, params);
                 
                 Util.dispatchData(result, response, request, out);
             }
+
         }catch(Exception e ){
             response.getWriter().write(e.getMessage());
         }            
@@ -117,7 +134,7 @@ public class FrontController extends HttpServlet {
         processRequest(request,response);        
     }
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        processRequest(request,response);        
+        processRequest(request,response);                
     }    
 
     public void displayMappings(PrintWriter out) {
