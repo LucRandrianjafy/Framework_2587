@@ -2,6 +2,7 @@ package util;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -64,7 +65,7 @@ public class Util{
             
             else if (file.getName().endsWith(".class")) {
                 Class<?> clazz = Class.forName(packageName + '.' + file.getName().substring(0, file.getName().length() - 6));
-                if (clazz.isAnnotationPresent(MyAnnotation.class)) {
+                if (clazz.isAnnotationPresent(MyAnnotation.class)) {                    
                     classes.add(clazz);
                 }
             }
@@ -120,6 +121,17 @@ public class Util{
         throw new IllegalArgumentException("URL not found");        
     }
 
+    public static Mapping getMapping(String link, HashMap<String, Mapping> urlMapping) {
+        for (Map.Entry<String, Mapping> entry : urlMapping.entrySet()) {
+            String key = entry.getKey();
+            Mapping mapping = entry.getValue();
+            if (link.contains(key)) {
+                return mapping;
+            }
+        }
+        throw new IllegalArgumentException("URL not found");        
+    }
+
     public static void dispatchData (Object result , HttpServletResponse response, HttpServletRequest request,  PrintWriter out)  throws ServletException, IOException{
         if( result instanceof String ){                    
             out.println("Method return : " + (String) result);
@@ -135,5 +147,54 @@ public class Util{
             throw new IllegalArgumentException("Another type return");
         }
     }
+
+    // prendre les mots apres "?" 
+    public static String getWordsAfterQst(String input) {
+        String[] parts = input.split("\\?");
+        if (parts.length > 1) {
+            return parts[1].trim();
+        } else {
+            return "";
+        }
+    }
+
+    public static Object[] getMethodParams(Method method, HttpServletRequest request) throws IllegalArgumentException {
+        Parameter[] parameters = method.getParameters();
+        Object[] methodParams = new Object[parameters.length];
+
+        for (int i = 0; i < parameters.length; i++) {
+            String paramName = "";
+            if (parameters[i].isAnnotationPresent(AnnotationParameter.class)) {
+                paramName = parameters[i].getAnnotation(AnnotationParameter.class).name();
+            } else {
+                paramName = parameters[i].getName();
+            }
+            String paramValue = request.getParameter(paramName);
+            Class<?> paramType = parameters[i].getType();
+
+            if (paramValue == null) {
+                throw new IllegalArgumentException("Missing parameter: " + paramName);
+            }
+
+            if (paramType == Date.class || paramType == java.sql.Date.class) {
+                try {
+                    methodParams[i] = java.sql.Date.valueOf(paramValue);
+                } catch (IllegalArgumentException e) {
+                    throw new IllegalArgumentException("Invalid date format for parameter: " + paramName);
+                }
+            } else if (paramType == int.class) {
+                methodParams[i] = Integer.parseInt(paramValue);
+            } else if (paramType == double.class) {
+                methodParams[i] = Double.parseDouble(paramValue);
+            } else if (paramType == boolean.class) {
+                methodParams[i] = Boolean.parseBoolean(paramValue);
+            } else {
+                methodParams[i] = paramValue;
+            }
+        }
+
+        return methodParams;
+    }
+
 
 }
