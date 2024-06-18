@@ -3,6 +3,8 @@ package util;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -158,6 +160,27 @@ public class Util{
         }
     }
 
+    public static Object typage(String paramValue, String paramName, Class paramType) {
+        Object o = null;
+
+        if (paramType == Date.class || paramType == java.sql.Date.class) {
+            try {
+                o = java.sql.Date.valueOf(paramValue);
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("Invalid date format for parameter: " + paramName);
+            }
+        } else if (paramType == int.class) {
+            o = Integer.parseInt(paramValue);
+        } else if (paramType == double.class) {
+            o = Double.parseDouble(paramValue);
+        } else if (paramType == boolean.class) {
+            o = Boolean.parseBoolean(paramValue);
+        } else {
+            o = paramValue;
+        }
+        return o;
+    }
+
     public static Object[] getMethodParams(Method method, HttpServletRequest request) throws IllegalArgumentException {
         Parameter[] parameters = method.getParameters();
         Object[] methodParams = new Object[parameters.length];
@@ -169,30 +192,36 @@ public class Util{
             } else {
                 paramName = parameters[i].getName();
             }
-            String paramValue = request.getParameter(paramName);
+
             Class<?> paramType = parameters[i].getType();
 
-            if (paramValue == null) {
-                throw new IllegalArgumentException("Missing parameter: " + paramName);
-            }
-
-            if (paramType == Date.class || paramType == java.sql.Date.class) {
+            // Si le type du paramètre est un objet complexe (non primitif et non String)
+            if (!paramType.isPrimitive() && !paramType.equals(String.class)) {
                 try {
-                    methodParams[i] = java.sql.Date.valueOf(paramValue);
-                } catch (IllegalArgumentException e) {
-                    throw new IllegalArgumentException("Invalid date format for parameter: " + paramName);
+                    Object paramObject = paramType.getDeclaredConstructor().newInstance();
+                    Field[] fields = paramType.getDeclaredFields();
+                    
+                    for (Field field : fields) {
+                        String fieldName = field.getName();
+                        String fieldValue = request.getParameter(paramName + "." + fieldName);
+                        if (fieldValue != null) {
+                            field.setAccessible(true);
+                            Object typedValue = typage(fieldValue, fieldName, field.getType());
+                            field.set(paramObject, typedValue);
+                        }
+                    }
+                    methodParams[i] = paramObject;
+                } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+                    throw new IllegalArgumentException("Error creating parameter object: " + paramName, e);
                 }
-            } else if (paramType == int.class) {
-                methodParams[i] = Integer.parseInt(paramValue);
-            } else if (paramType == double.class) {
-                methodParams[i] = Double.parseDouble(paramValue);
-            } else if (paramType == boolean.class) {
-                methodParams[i] = Boolean.parseBoolean(paramValue);
             } else {
-                methodParams[i] = paramValue;
+                String paramValue = request.getParameter(paramName);
+                if (paramValue == null) {
+                    throw new IllegalArgumentException("Missing parameter: " + paramName);
+                }
+                methodParams[i] = typage(paramValue, paramName, paramType);
             }
         }
-
         return methodParams;
     }
 

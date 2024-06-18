@@ -101,9 +101,7 @@ public class FrontController extends HttpServlet {
             Mapping mapping = Util.getMapping(link, this.urlMapping); // prendre mapping
 
             out.println("Liste des methodes : ");
-            for (Mapping m : this.urlMapping.values()) {
-                out.println(m.getMethodName());
-            }
+            displayMappings(out);
 
             if( link_result != null ){
                 String className = Util.getWordAfterNthSlash(link_result, 3);
@@ -126,8 +124,6 @@ public class FrontController extends HttpServlet {
         }catch(Exception e ){
             response.getWriter().write(e.getMessage());
         }            
-
-        
     }
 
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
