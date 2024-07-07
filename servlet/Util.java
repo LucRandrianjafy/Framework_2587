@@ -21,7 +21,8 @@ import java.io.File;
 
 import annotation.*;
 import servlet.*;
- 
+import session.*;
+
 public class Util{
 
     // Prendre les Controllers a l aide de l'annotation MyAnnotation
@@ -181,49 +182,64 @@ public class Util{
         return o;
     }
 
+
+
     public static Object[] getMethodParams(Method method, HttpServletRequest request) throws IllegalArgumentException {
         Parameter[] parameters = method.getParameters();
         Object[] methodParams = new Object[parameters.length];
 
         for (int i = 0; i < parameters.length; i++) {
-            String paramName = "";
-            if (parameters[i].isAnnotationPresent(AnnotationParameter.class)) {
-                paramName = parameters[i].getAnnotation(AnnotationParameter.class).name();
-            } else {
-                paramName = parameters[i].getName();
-            }
-
             Class<?> paramType = parameters[i].getType();
+            String paramName = "";
 
-            // Si le type du paramètre est un objet complexe (non primitif et non String)
-            if (!paramType.isPrimitive() && !paramType.equals(String.class)) {
-                try {
-                    Object paramObject = paramType.getDeclaredConstructor().newInstance();
-                    Field[] fields = paramType.getDeclaredFields();
-                    
-                    for (Field field : fields) {
-                        String fieldName = field.getName();
-                        String fieldValue = request.getParameter(paramName + "." + fieldName);
-                        if (fieldValue != null) {
-                            field.setAccessible(true);
-                            Object typedValue = typage(fieldValue, fieldName, field.getType());
-                            field.set(paramObject, typedValue);
+            if( paramType == MySession.class ){
+                methodParams[i] = new MySession( request.getSession() );          
+            }
+            else{
+                if (parameters[i].isAnnotationPresent(AnnotationParameter.class)) {
+                    paramName = parameters[i].getAnnotation(AnnotationParameter.class).name();
+                } else {     
+                    throw new IllegalArgumentException("Il n y a pas d annotation . ETU2587");
+                }
+
+
+                // Si le type du paramètre est un objet complexe (non primitif et non String)
+                if (!paramType.isPrimitive() && !paramType.equals(String.class)) {
+                    try {
+                        Object paramObject = paramType.getDeclaredConstructor().newInstance();
+                        Field[] fields = paramType.getDeclaredFields();
+                        
+                        for (Field field : fields) {
+                            String fieldName = field.getName();
+                            String fieldValue = request.getParameter(paramName + "." + fieldName);  // prendre les get dans url
+                            if (fieldValue != null) {
+                                field.setAccessible(true);
+                                Object typedValue = typage(fieldValue, fieldName, field.getType()); // (valeur, nom, type)
+                                field.set(paramObject, typedValue);
+                                
+                                /*Method m = paramObject.getClass().getMethod(setSetters(fieldName), field.getType());
+                                m.invoke(paramObject, typedValue);*/
+                            }
                         }
+                        methodParams[i] = paramObject;
+                    } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+                        throw new IllegalArgumentException("Error creating parameter object: " + paramName, e);
                     }
-                    methodParams[i] = paramObject;
-                } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-                    throw new IllegalArgumentException("Error creating parameter object: " + paramName, e);
+                } else {
+                    String paramValue = request.getParameter(paramName);
+                    if (paramValue == null) {
+                        throw new IllegalArgumentException("Missing parameter: " + paramName);
+                    }
+                    methodParams[i] = typage(paramValue, paramName, paramType);
                 }
-            } else {
-                String paramValue = request.getParameter(paramName);
-                if (paramValue == null) {
-                    throw new IllegalArgumentException("Missing parameter: " + paramName);
-                }
-                methodParams[i] = typage(paramValue, paramName, paramType);
             }
         }
+            
         return methodParams;
     }
 
+    public static String setSetters(String name) {
+        return "set" + Character.toUpperCase(name.charAt(0)) + name.substring(1);
+    }
 
 }
