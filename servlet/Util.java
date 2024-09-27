@@ -23,6 +23,8 @@ import annotation.*;
 import servlet.*;
 import session.*;
 
+import com.google.gson.Gson;
+
 public class Util{
 
     // Prendre les Controllers a l aide de l'annotation MyAnnotation
@@ -132,23 +134,40 @@ public class Util{
                 return mapping;
             }
         }
-        throw new IllegalArgumentException("URL not found");        
+        throw new IllegalArgumentException("URL not foundd");        
     }
 
-    public static void dispatchData (Object result , HttpServletResponse response, HttpServletRequest request,  PrintWriter out)  throws ServletException, IOException{
-        if( result instanceof String ){                    
-            out.println("Method return : " + (String) result);
-        }else if( result instanceof ModelView ){            
-            ModelView mv = ((ModelView) result);
-            for (Map.Entry<String, Object> entry : mv.getData().entrySet()) {
-                request.setAttribute(entry.getKey(), entry.getValue());
-            }              
-            RequestDispatcher dispatcher = request.getRequestDispatcher(mv.getUrl());
-            dispatcher.forward(request, response);
-
-        }else{
-            throw new IllegalArgumentException("Another type return");
+    public static void dispatchData (Object result , HttpServletResponse response, HttpServletRequest request,  PrintWriter out, Method method)  throws ServletException, IOException{        
+        try{            
+            if( method.isAnnotationPresent(RestAPI.class) ){                                
+                response.setContentType("application/json");
+                if( result instanceof String ){                    
+                    out.println(new Gson().toJson(result));
+                }else if( result instanceof ModelView ){            
+                    ModelView mv = ((ModelView) result);                
+                    out.println(new Gson().toJson(mv.getData()));
+                }else{
+                    throw new IllegalArgumentException("JSON Another type return");
+                }
+            }
+            else{
+                if( result instanceof String ){                    
+                    out.println("Method return : " + (String) result);
+                }else if( result instanceof ModelView ){            
+                    ModelView mv = ((ModelView) result);
+                    for (Map.Entry<String, Object> entry : mv.getData().entrySet()) {
+                        request.setAttribute(entry.getKey(), entry.getValue());
+                    }
+                    RequestDispatcher dispatcher = request.getRequestDispatcher(mv.getUrl());
+                    dispatcher.forward(request, response);
+                }else{
+                    throw new IllegalArgumentException("Another type return");
+                }               
+            }
+        }catch(Exception e ) {
+            throw new IllegalArgumentException("ERROR");
         }
+        
     }
 
     // prendre les mots apres "?" 

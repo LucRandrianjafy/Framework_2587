@@ -81,36 +81,35 @@ public class FrontController extends HttpServlet {
             String url_typed = request.getRequestURL().toString();
             PrintWriter out = response.getWriter();
             
-            out.println("url_typed : " + url_typed);                        
+            // out.println("url_typed : " + url_typed);                        
 
-            out.println("Liste des contrôleurs : ");
-            if( this.listeController != null ){
-                for (Class<?> controllerClass : this.listeController) {
-                    out.println(controllerClass.getName());
-                }
-            }        
+            // out.println("Liste des contrôleurs : ");
+            // if( this.listeController != null ){
+            //     for (Class<?> controllerClass : this.listeController) {
+            //         out.println(controllerClass.getName());
+            //     }
+            // }        
 
-            out.println("\n");
 
             /**************** Affficher methode associée  ****************/
             String link = Util.getWords(url_typed, 4);  // prendre l'url a partir du 4eme "/"
             link = "/" + link;
 
             String link_result = Util.findTheRightMethod(link, this.urlMapping); // prendre value de l'annotation  
-            out.println("link result " + link_result);
+            // out.println("link result " + link_result);
 
             Mapping mapping = Util.getMapping(link, this.urlMapping); // prendre mapping
 
-            out.println("Liste des methodes : ");
-            displayMappings(out);
+            // out.println("Liste des methodes : ");
+            // displayMappings(out);
 
             if( link_result != null ){
                 String className = Util.getWordAfterNthSlash(link_result, 3);
                 String methodName = Util.getWordAfterNthSlash(link_result, 4);            
 
-                out.println("Link typed : " + link);
-                out.println("Class name : " + className);
-                out.println("Method name : " + methodName);
+                // out.println("Link typed : " + link);
+                // out.println("Class name : " + className);
+                // out.println("Method name : " + methodName);
 
                 Class<?> classeCible = Class.forName( this.controller_package + "." + className);            
                 Method maMethode = classeCible.getMethod(methodName, mapping.getParameterTypes());
@@ -119,7 +118,7 @@ public class FrontController extends HttpServlet {
                 Object[] params = Util.getMethodParams(maMethode, request);
                 Object result = maMethode.invoke(instance, params);
                 
-                Util.dispatchData(result, response, request, out);
+                Util.dispatchData(result, response, request, out, maMethode);
             }
 
         }catch(Exception e ){
