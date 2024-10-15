@@ -1,9 +1,12 @@
 package servlet;
 
+import annotation.*;
+
 public class Mapping{
     String className;
     String methodName;
     Class[] parameterTypes;
+    Verb verbAction;
 
     public Mapping(String className, String methodName) {
         this.className = className;
@@ -32,5 +35,13 @@ public class Mapping{
 
     public String getMethodName() {
         return methodName;
+    }
+
+    public Verb getVerbAction() {
+        return verbAction;
+    }
+
+    public void setVerbAction( Verb v ) {
+        this.verbAction = v;
     }
 }
