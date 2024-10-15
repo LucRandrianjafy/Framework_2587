@@ -82,7 +82,7 @@ public class Util{
     public static List<Method> findMethodsWithAnnotation(Class<?> clazz) {
         List<Method> annotatedMethods = new ArrayList<>();
         for (Method method : clazz.getDeclaredMethods()) {
-            if (method.isAnnotationPresent(Get.class)) {
+            if (method.isAnnotationPresent(Url.class)) {
                 annotatedMethods.add(method);
             }
         }
