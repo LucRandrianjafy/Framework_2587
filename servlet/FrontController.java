@@ -34,7 +34,7 @@ public class FrontController extends HttpServlet {
             /**************** Prendre tout les contrôleurs  ****************/
             ServletContext context = config.getServletContext();
             this.controller_package = context.getInitParameter("base_package");     // nom package des contrôleurs dans web.xml         
-            this.listeController = Util.getControllerClasses(controller_package);                     
+            this.listeController = Util.getControllerClasses(controller_package);   // appel du fonction                     
 
             /**************** Creation urlMapping  ****************/
             String controllerName = ""; 
@@ -45,7 +45,7 @@ public class FrontController extends HttpServlet {
             if( this.listeController != null ){
                 for (Class clazz : this.listeController) {
                     controllerName = clazz.getSimpleName();
-                    listMethod.addAll( Util.findMethodsWithAnnotation(clazz) );  // obtention des methodes annotées URL
+                    listMethod.addAll( Util.findMethodsWithAnnotation(clazz));  //obtention des methodes annotées
 
                     // prendre les methodName et value de l'annotation
                     for (Method method : listMethod) {
@@ -54,8 +54,8 @@ public class FrontController extends HttpServlet {
                         Class[] parameterTypes = method.getParameterTypes();
 
                         // value de l'annotation
-                        Url urlAnnotation = method.getAnnotation(Url.class);
-                        String url = urlAnnotation.value(); 
+                        Get getAnnotation = method.getAnnotation(Get.class);
+                        String url = getAnnotation.value(); 
 
                         if (urlMapping.containsKey(url)) {                        
                             throw new IllegalArgumentException("Duplicate URL in urlMapping : " + url);
@@ -80,18 +80,36 @@ public class FrontController extends HttpServlet {
 
             String url_typed = request.getRequestURL().toString();
             PrintWriter out = response.getWriter();
-                        
+            
+            // out.println("url_typed : " + url_typed);                        
+
+            // out.println("Liste des contrôleurs : ");
+            // if( this.listeController != null ){
+            //     for (Class<?> controllerClass : this.listeController) {
+            //         out.println(controllerClass.getName());
+            //     }
+            // }        
+
+
             /**************** Affficher methode associée  ****************/
             String link = Util.getWords(url_typed, 4);  // prendre l'url a partir du 4eme "/"
             link = "/" + link;
 
             String link_result = Util.findTheRightMethod(link, this.urlMapping); // prendre value de l'annotation  
-            
+            // out.println("link result " + link_result);
+
             Mapping mapping = Util.getMapping(link, this.urlMapping); // prendre mapping
-            
+
+            // out.println("Liste des methodes : ");
+            // displayMappings(out);
+
             if( link_result != null ){
                 String className = Util.getWordAfterNthSlash(link_result, 3);
                 String methodName = Util.getWordAfterNthSlash(link_result, 4);            
+
+                // out.println("Link typed : " + link);
+                // out.println("Class name : " + className);
+                // out.println("Method name : " + methodName);
 
                 Class<?> classeCible = Class.forName( this.controller_package + "." + className);            
                 Method maMethode = classeCible.getMethod(methodName, mapping.getParameterTypes());
