@@ -55,6 +55,7 @@ public class Util{
         }
     }
 
+    // Les classes controleurs
     private static List<Class<?>> findClasses(File directory, String packageName) throws ClassNotFoundException {
         List<Class<?>> classes = new ArrayList<>();
         if (!directory.exists()) {
@@ -78,16 +79,17 @@ public class Util{
         return classes;
     }
 
-    // prendre method qui contient un Annotation Get
+    // Les methodes qui sont annotees URL 
     public static List<Method> findMethodsWithAnnotation(Class<?> clazz) {
         List<Method> annotatedMethods = new ArrayList<>();
         for (Method method : clazz.getDeclaredMethods()) {
-            if (method.isAnnotationPresent(Get.class)) {
+            if (method.isAnnotationPresent(Url.class)) {
                 annotatedMethods.add(method);
+                
             }
         }
         return annotatedMethods;
-    }
+    }    
 
     // prendre tout les mots A PARTIR DU nieme "/"
     public static String getWords(String input, int n) {
@@ -115,15 +117,22 @@ public class Util{
     }
 
     // prenre la methode qui contient l'annotation appropriée
-    public static String findTheRightMethod(String link, HashMap<String, Mapping> urlMapping) {
+    public static String findTheRightMethod(String link, HashMap<String, Mapping> urlMapping, String verbStr) {
         for (Map.Entry<String, Mapping> entry : urlMapping.entrySet()) {
             String key = entry.getKey();
             Mapping mapping = entry.getValue();
-            if (link.contains(key)) {
-                return link + "/" + mapping.getClassName() + "/" + mapping.getMethodName();
+            Set<VerbAction> vbActions = mapping.getVerbAction();
+            verbStr = verbStr.toUpperCase();
+
+            // boucle pour voir si verb dans VerbAction = verb
+            for ( VerbAction vbAction : vbActions ){
+                Verb verb = vbAction.getVerb();                        
+                if (link.contains(key) && verbStr.equals( verb.name().toUpperCase() )) {
+                    return link + "/" + mapping.getClassName() + "/" + mapping.getMethodName();
+                }
             }
         }
-        throw new IllegalArgumentException("URL not found");        
+        throw new IllegalArgumentException("URL not found");
     }
 
     public static Mapping getMapping(String link, HashMap<String, Mapping> urlMapping) {
@@ -139,12 +148,13 @@ public class Util{
 
     public static void dispatchData (Object result , HttpServletResponse response, HttpServletRequest request,  PrintWriter out, Method method)  throws ServletException, IOException{        
         try{            
+            // JSON
             if( method.isAnnotationPresent(RestAPI.class) ){                                
                 response.setContentType("application/json");
                 if( result instanceof String ){                    
                     out.println(new Gson().toJson(result));
-                }else if( result instanceof ModelView ){            
-                    ModelView mv = ((ModelView) result);                
+                }else if( result instanceof ModelView ){
+                    ModelView mv = ((ModelView) result);       
                     out.println(new Gson().toJson(mv.getData()));
                 }else{
                     throw new IllegalArgumentException("JSON Another type return");
@@ -153,7 +163,7 @@ public class Util{
             else{
                 if( result instanceof String ){                    
                     out.println("Method return : " + (String) result);
-                }else if( result instanceof ModelView ){            
+                }else if( result instanceof ModelView ){
                     ModelView mv = ((ModelView) result);
                     for (Map.Entry<String, Object> entry : mv.getData().entrySet()) {
                         request.setAttribute(entry.getKey(), entry.getValue());
@@ -162,10 +172,10 @@ public class Util{
                     dispatcher.forward(request, response);
                 }else{
                     throw new IllegalArgumentException("Another type return");
-                }               
+                }
             }
-        }catch(Exception e ) {
-            throw new IllegalArgumentException("ERROR");
+        }catch(Exception e ) {            
+            throw new IllegalArgumentException("ERROR DISPACTH DATA");
         }
         
     }

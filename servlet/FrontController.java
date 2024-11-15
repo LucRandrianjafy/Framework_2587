@@ -34,7 +34,7 @@ public class FrontController extends HttpServlet {
             /**************** Prendre tout les contrôleurs  ****************/
             ServletContext context = config.getServletContext();
             this.controller_package = context.getInitParameter("base_package");     // nom package des contrôleurs dans web.xml         
-            this.listeController = Util.getControllerClasses(controller_package);   // appel du fonction                     
+            this.listeController = Util.getControllerClasses(controller_package);                     
 
             /**************** Creation urlMapping  ****************/
             String controllerName = ""; 
@@ -45,7 +45,7 @@ public class FrontController extends HttpServlet {
             if( this.listeController != null ){
                 for (Class clazz : this.listeController) {
                     controllerName = clazz.getSimpleName();
-                    listMethod.addAll( Util.findMethodsWithAnnotation(clazz));  //obtention des methodes annotées
+                    listMethod.addAll( Util.findMethodsWithAnnotation(clazz) );  // obtention des methodes annotées URL
 
                     // prendre les methodName et value de l'annotation
                     for (Method method : listMethod) {
@@ -54,15 +54,35 @@ public class FrontController extends HttpServlet {
                         Class[] parameterTypes = method.getParameterTypes();
 
                         // value de l'annotation
-                        Get getAnnotation = method.getAnnotation(Get.class);
-                        String url = getAnnotation.value(); 
+                        Url urlAnnotation = method.getAnnotation(Url.class);
+                        String url = urlAnnotation.value();
+                        
+                        // MAPPING
+                        Set<VerbAction> verbActions = new HashSet<>();
+                        VerbAction vbAction = new VerbAction();
+                        Verb verb;
 
-                        if (urlMapping.containsKey(url)) {                        
-                            throw new IllegalArgumentException("Duplicate URL in urlMapping : " + url);
+                        if (method.getAnnotation(Verb.Get.class) != null) {
+                            verb = Verb.getFrom(Verb.Get.class);
+                            vbAction.add(verb, method);
+                            verbActions.add(vbAction);
+                        } else if (method.getAnnotation(Verb.Post.class) != null) {
+                            verb = Verb.getFrom(Verb.Post.class);
+                            vbAction.add(verb, method);
+                            verbActions.add(vbAction);
                         } else {
-                            this.urlMapping.put(url, new Mapping(controllerName, methodName, parameterTypes));
+                            verb = null;
                         }
+                            
+
+
+                        this.urlMapping.put(url, new Mapping(controllerName, methodName, parameterTypes, verbActions));
+                        // if (urlMapping.containsKey(url)) {                        
+                        //     throw new IllegalArgumentException("Duplicate URL in urlMapping : " + url);
+                        // } else {
+                        // }
                     }
+
                     // effacer les donnees 
                     listMethod.clear();
                 }
@@ -80,36 +100,20 @@ public class FrontController extends HttpServlet {
 
             String url_typed = request.getRequestURL().toString();
             PrintWriter out = response.getWriter();
-            
-            // out.println("url_typed : " + url_typed);                        
-
-            // out.println("Liste des contrôleurs : ");
-            // if( this.listeController != null ){
-            //     for (Class<?> controllerClass : this.listeController) {
-            //         out.println(controllerClass.getName());
-            //     }
-            // }        
-
-
+                        
             /**************** Affficher methode associée  ****************/
             String link = Util.getWords(url_typed, 4);  // prendre l'url a partir du 4eme "/"
             link = "/" + link;
 
-            String link_result = Util.findTheRightMethod(link, this.urlMapping); // prendre value de l'annotation  
-            // out.println("link result " + link_result);
-
+            // Mettre en argument request.getMethod()
+            String link_result = Util.findTheRightMethod(link, this.urlMapping, request.getMethod()); // prendre value de l'annotation  
+            
             Mapping mapping = Util.getMapping(link, this.urlMapping); // prendre mapping
-
-            // out.println("Liste des methodes : ");
-            // displayMappings(out);
-
+            
+            /************   ***************/            
             if( link_result != null ){
                 String className = Util.getWordAfterNthSlash(link_result, 3);
                 String methodName = Util.getWordAfterNthSlash(link_result, 4);            
-
-                // out.println("Link typed : " + link);
-                // out.println("Class name : " + className);
-                // out.println("Method name : " + methodName);
 
                 Class<?> classeCible = Class.forName( this.controller_package + "." + className);            
                 Method maMethode = classeCible.getMethod(methodName, mapping.getParameterTypes());
@@ -127,17 +131,21 @@ public class FrontController extends HttpServlet {
     }
 
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        processRequest(request,response);        
+        processRequest(request, response);
     }
-    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        processRequest(request,response);                
-    }    
 
-    public void displayMappings(PrintWriter out) {
-        for (Map.Entry<String, Mapping> entry : urlMapping.entrySet()) {
-            String url = entry.getKey();
-            Mapping mapping = entry.getValue();
-            out.println("URL: " + url + ", ClassName: " + mapping.getClassName() + ", MethodName: " + mapping.getMethodName());
-        }
-    }
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {        
+        // PrintWriter out = response.getWriter();
+
+        // Object result = request.getAttribute("result");
+        // Method maMethode = (Method)request.getAttribute("maMethode");
+
+        // if( result == null ){
+        //     Util.dispatchData( result, response, request, out, maMethode );
+        // }else{
+        //     System.out.println( " No method found with this Verb " );
+        // }
+        processRequest(request, response);
+    }    
+    
 }

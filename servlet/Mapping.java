@@ -1,7 +1,13 @@
 package servlet;
 
+import java.util.Set;
+
+import util.*;
+import annotation.*;
+
 public class Mapping{
     String className;
+    Set<VerbAction> verbAction;
     String methodName;
     Class[] parameterTypes;
 
@@ -14,6 +20,13 @@ public class Mapping{
         this.className = className;
         this.methodName = methodName;
         this.parameterTypes = parameterTypes;
+    }
+    
+    public Mapping(String className, String methodName, Class[] parameterTypes, Set<VerbAction> verbAction ) {
+        this.className = className;
+        this.methodName = methodName;
+        this.parameterTypes = parameterTypes;
+        this.verbAction = verbAction;
     }
 
     public Mapping(){}
@@ -32,5 +45,13 @@ public class Mapping{
 
     public String getMethodName() {
         return methodName;
+    }
+
+    public Set<VerbAction> getVerbAction() {
+        return verbAction;
+    }
+
+    public void setVerbAction(Set<VerbAction> verbAction) {
+        this.verbAction = verbAction;
     }
 }
