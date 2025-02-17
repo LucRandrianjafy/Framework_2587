@@ -25,6 +25,7 @@ public class FrontController extends HttpServlet {
     public String controller_package;
     public List<Class<?>> listeController;
     public HashMap<String, Mapping> urlMapping = new HashMap<String, Mapping>();
+    public String previousUrl = null;
 
     @Override
     public void init(ServletConfig config) throws ServletException {
@@ -94,57 +95,60 @@ public class FrontController extends HttpServlet {
 
     protected void processRequest(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         response.setContentType("text/plain");
-        
-        /**************** Affficher contrôleurs  ****************/        
-        try{            
 
-            String url_typed = request.getRequestURL().toString();
+        String url_typed = request.getRequestURL().toString(); // Capturer l'URL actuelle
+        boolean success = false; // Indicateur pour gérer la mise à jour de previousUrl
+        String link = Util.getWords(url_typed, 4);  // Extraire l'URL à partir du 4ème "/"
+        link = "/" + link;
+
+        try {
             PrintWriter out = response.getWriter();
-                        
-            /**************** Affficher methode associée  ****************/
-            String link = Util.getWords(url_typed, 4);  // prendre l'url a partir du 4eme "/"
-            link = "/" + link;
 
-            // Mettre en argument request.getMethod()
-            String link_result = Util.findTheRightMethod(link, this.urlMapping, request.getMethod()); // prendre value de l'annotation  
-            
-            Mapping mapping = Util.getMapping(link, this.urlMapping); // prendre mapping
-            
-            /************   ***************/            
-            if( link_result != null ){
+            /**************** Afficher méthode associée ****************/
+
+            // Trouver la méthode correspondante
+            String link_result = Util.findTheRightMethod(link, this.urlMapping, request.getMethod(), response);
+            Mapping mapping = Util.getMapping(link, this.urlMapping);
+
+            if (link_result != null) {
                 String className = Util.getWordAfterNthSlash(link_result, 3);
-                String methodName = Util.getWordAfterNthSlash(link_result, 4);            
+                String methodName = Util.getWordAfterNthSlash(link_result, 4);
 
-                Class<?> classeCible = Class.forName( this.controller_package + "." + className);            
+                // Charger la classe cible et récupérer la méthode correspondante
+                Class<?> classeCible = Class.forName(this.controller_package + "." + className);
                 Method maMethode = classeCible.getMethod(methodName, mapping.getParameterTypes());
                 Object instance = classeCible.newInstance();
 
-                Object[] params = Util.getMethodParams(maMethode, request);
-                Object result = maMethode.invoke(instance, params);
-                
-                Util.dispatchData(result, response, request, out, maMethode);
-            }
+                // Préparer les paramètres de la méthode
+                Object[] params = Util.getMethodParams(maMethode, previousUrl, request, response);
+                System.out.println(previousUrl);
 
-        }catch(Exception e ){
+                // Invoquer la méthode cible
+                Object result = maMethode.invoke(instance, params);
+
+                // Gérer les données résultantes
+                Util.dispatchData(result, response, request, out, maMethode);
+
+                // Si tout se passe bien, marquer comme réussi
+                success = true;
+            }
+        } catch (Exception e) {
+            // En cas d'erreur, écrire le message d'exception dans la réponse
             response.getWriter().write(e.getMessage());
-        }            
+        } finally {
+            // Mettre à jour previousUrl uniquement si success est vrai
+            if (success) {
+                previousUrl = link;
+            }
+        }
     }
+
 
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         processRequest(request, response);
     }
 
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {        
-        // PrintWriter out = response.getWriter();
-
-        // Object result = request.getAttribute("result");
-        // Method maMethode = (Method)request.getAttribute("maMethode");
-
-        // if( result == null ){
-        //     Util.dispatchData( result, response, request, out, maMethode );
-        // }else{
-        //     System.out.println( " No method found with this Verb " );
-        // }
         processRequest(request, response);
     }    
     
