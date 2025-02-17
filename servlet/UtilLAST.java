@@ -10,11 +10,12 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.Part;
-import javax.servlet.RequestDispatcher;
-import javax.servlet.ServletException;
+import javax.servlet.*;
 
 import java.util.*;
+
 import java.net.URL;
+
 import java.io.PrintWriter;
 import java.io.IOException;
 import java.io.File;
@@ -26,7 +27,7 @@ import session.*;
 
 import com.google.gson.Gson;
 
-public class Util{
+public class UtilLAST{
 
     // Prendre les Controllers a l aide de l'annotation MyAnnotation
     public static List<Class<?>> getControllerClasses(String packageName) 
@@ -118,7 +119,7 @@ public class Util{
     }
 
     // prenre la methode qui contient l'annotation appropriée
-    public static String findTheRightMethod(String link, HashMap<String, Mapping> urlMapping, String verbStr, HttpServletResponse response) {
+    public static String findTheRightMethod(String link, HashMap<String, Mapping> urlMapping, String verbStr) {
         for (Map.Entry<String, Mapping> entry : urlMapping.entrySet()) {
             String key = entry.getKey();
             Mapping mapping = entry.getValue();
@@ -126,23 +127,15 @@ public class Util{
             verbStr = verbStr.toUpperCase();
 
             // boucle pour voir si verb dans VerbAction = verb
-            for (VerbAction vbAction : vbActions) {
+            for ( VerbAction vbAction : vbActions ){
                 Verb verb = vbAction.getVerb();                        
-                if (link.equals(key) && verbStr.equals(verb.name().toUpperCase())) {
+                if (link.contains(key) && verbStr.equals( verb.name().toUpperCase() )) {
                     return link + "/" + mapping.getClassName() + "/" + mapping.getMethodName();
                 }
             }
         }
-
-        // Si aucune correspondance trouvée, retourner 404
-        try {
-            response.sendError(HttpServletResponse.SC_NOT_FOUND, "URL not found");
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return null;
+        throw new IllegalArgumentException("URL not found");
     }
-
 
     public static Mapping getMapping(String link, HashMap<String, Mapping> urlMapping) {
         for (Map.Entry<String, Mapping> entry : urlMapping.entrySet()) {
@@ -221,116 +214,69 @@ public class Util{
         return o;
     }
 
-    public static Object[] getMethodParams(Method method, String previousUrl, HttpServletRequest request, HttpServletResponse response)
-        throws IllegalArgumentException, IOException, ServletException {
-        System.out.println(previousUrl);
+
+
+    public static Object[] getMethodParams(Method method, HttpServletRequest request) throws IllegalArgumentException, IOException, ServletException {
         Parameter[] parameters = method.getParameters();
         Object[] methodParams = new Object[parameters.length];
-        Map<String, String> validationErrors = new HashMap<>(); // Liste pour collecter les erreurs
-        Map<String, String> invalidValues = new HashMap<>(); // Map pour collecter les valeurs invalides
 
         for (int i = 0; i < parameters.length; i++) {
             Class<?> paramType = parameters[i].getType();
             String paramName = "";
 
-            if (paramType == MySession.class) {
-                methodParams[i] = new MySession(request.getSession());
-            } else {
+            if( paramType == MySession.class ){
+                methodParams[i] = new MySession( request.getSession() );          
+            }
+            else{
                 if (parameters[i].isAnnotationPresent(AnnotationParameter.class)) {
                     paramName = parameters[i].getAnnotation(AnnotationParameter.class).name();
+                    System.out.println(paramName);
                 } else {
-                    validationErrors.put("Il n'y a pas d'annotation pour ce paramètre. ETU2587", paramName);
-                    continue; // On continue pour vérifier les autres paramètres
+                    throw new IllegalArgumentException("Il n y a pas d annotation . ETU2587");
                 }
 
-                try {
-                    if (!paramType.isPrimitive() && !paramType.equals(String.class)) {
-                        if (paramType.equals(FileUpload.class)) {
+
+                // Si le type du paramètre est un objet complexe (non primitif et non String)
+                if (!paramType.isPrimitive() && !paramType.equals(String.class)) {
+                    System.out.println("non primitif");
+                    try {
+                        if (paramType.equals(FileUpload.class)){
                             System.out.println("equals FileUpload");
                             methodParams[i] = handleFileUpload(request, paramName);
-                        } else {
+                        } else{
                             Object paramObject = paramType.getDeclaredConstructor().newInstance();
-                            Field[] fields = paramType.getDeclaredFields();
-
-                            for (Field field : fields) {
-                                field.setAccessible(true);
-                                String fieldName = field.getName();
-                                String fieldValue = request.getParameter(paramName + "." + fieldName);
-                                System.out.println("FieldValue = " + fieldValue);
-
-                                invalidValues.put(paramName, fieldValue);
-                                try {
-                                    validateParameterAnnotations(parameters[i], fieldValue);
-                                } catch (IllegalArgumentException e) {
-                                    validationErrors.put(paramName, e.getMessage());
-                                    System.out.println(e.getMessage());
-
-                                }
-
-                                if (fieldValue != null) {
-                                    Object typedValue = typage(fieldValue, fieldName, field.getType());
-                                    field.set(paramObject, typedValue);
-                                }
-                            }
+                            // Field[] fields = paramType.getDeclaredFields();
+                            
+                            // for (Field field : fields) {
+                            //     String fieldName = field.getName();
+                            //     String fieldValue = request.getParameter(paramName + "." + fieldName);  // prendre les get dans url
+                            //     if (fieldValue != null) {
+                            //         field.setAccessible(true);
+                            //         Object typedValue = typage(fieldValue, fieldName, field.getType()); // (valeur, nom, type)
+                            //         field.set(paramObject, typedValue);
+                                    
+                            //         /*Method m = paramObject.getClass().getMethod(setSetters(fieldName), field.getType());
+                            //         m.invoke(paramObject, typedValue);*/
+                            //     }
+                            // }
                             methodParams[i] = paramObject;
                         }
-                    } else {
-                        String paramValue = request.getParameter(paramName);
-                        if (paramValue == null) {
-                            validationErrors.put(paramName, "Missing parameter: " + paramName);
-                            continue;
-                        }
 
-                        invalidValues.put(paramName, paramValue);
-                        try {
-                            validateParameterAnnotations(parameters[i], paramValue);
-                        } catch (IllegalArgumentException e) {
-                            validationErrors.put(paramName, e.getMessage());
-                            System.out.println(e.getMessage());
-
-                        }
-
-                        methodParams[i] = typage(paramValue, paramName, paramType);
+                    } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+                        throw new IllegalArgumentException("Error creating parameter object: " + paramName, e);
                     }
-                } catch (Exception e) {
-                    validationErrors.put(paramName, "Erreur lors de la création de l'objet pour le paramètre '" + paramName + "': " + e.getMessage());
+                } else {
+                    System.out.println("else primitif");
+                    String paramValue = request.getParameter(paramName);
+                    if (paramValue == null) {
+                        throw new IllegalArgumentException("Missing parameter: " + paramName);
+                    }
+                    methodParams[i] = typage(paramValue, paramName, paramType);
                 }
             }
         }
-
-        // Si des erreurs de validation sont présentes, dispatcher vers l'URL précédente
-        if (!validationErrors.isEmpty()) {
-            // Ajout des erreurs et valeurs invalides dans les attributs de la requête
-            request.setAttribute("validationErrors", validationErrors);
-            request.setAttribute("invalidValues", invalidValues);
-            RequestDispatcher dispatcher = request.getRequestDispatcher(previousUrl);
-            try {
-                dispatcher.forward(request, response);
-            } catch (ServletException | IOException e) {
-                e.printStackTrace();
-                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Erreur lors du traitement des erreurs de validation.");
-            }
-            return null; // Fin de la méthode après le forward
-        }
-
-        return methodParams;
-    }
-
-
-
-    // Fonction de validation des annotations NotNull et Email
-    private static void validateParameterAnnotations(Parameter parameter, String paramValue) throws IllegalArgumentException {
-        if (parameter.isAnnotationPresent(Validation.NotNull.class)) {
-            if (paramValue == null || paramValue.trim().isEmpty()) {
-                throw new IllegalArgumentException("Le paramètre '" + parameter.getName() + "' ne peut pas être nul ou vide.");
-            }
-        }
-
-        if (parameter.isAnnotationPresent(Validation.Email.class)) {
-            if (paramValue == null || !isValidEmail(paramValue)) {
-                throw new IllegalArgumentException("L'email fourni '" + paramValue + "' est invalide.");
-            }
-        }
+            
+        return methodParams; 
     }
 
     public static String extractFileName(Part part) {
@@ -344,6 +290,7 @@ public class Util{
         }
         return "";
     }
+
 
     public static FileUpload handleFileUpload(HttpServletRequest request, String inputFileParam) {
         try {
