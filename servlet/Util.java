@@ -310,7 +310,7 @@ public class Util{
                 e.printStackTrace();
                 response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Erreur lors du traitement des erreurs de validation.");
             }
-            return null; // Fin de la méthode après le forward
+            return null;
         }
 
         return methodParams;
@@ -372,9 +372,7 @@ public class Util{
         }
     }
 
-    // Méthode pour vérifier si un email est valide
     private static boolean isValidEmail(String email) {
-        // Vous pouvez utiliser une expression régulière simple ou une bibliothèque dédiée pour valider l'email
         return email != null && email.matches("^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$");
     }
 

@@ -54,7 +54,6 @@ public class FrontController extends HttpServlet {
 
                         Class[] parameterTypes = method.getParameterTypes();
 
-                        // value de l'annotation
                         Url urlAnnotation = method.getAnnotation(Url.class);
                         String url = urlAnnotation.value();
                         
@@ -84,7 +83,6 @@ public class FrontController extends HttpServlet {
                         // }
                     }
 
-                    // effacer les donnees 
                     listMethod.clear();
                 }
             }
@@ -126,17 +124,13 @@ public class FrontController extends HttpServlet {
                 // Invoquer la méthode cible
                 Object result = maMethode.invoke(instance, params);
 
-                // Gérer les données résultantes
                 Util.dispatchData(result, response, request, out, maMethode);
 
-                // Si tout se passe bien, marquer comme réussi
                 success = true;
             }
         } catch (Exception e) {
-            // En cas d'erreur, écrire le message d'exception dans la réponse
             response.getWriter().write(e.getMessage());
         } finally {
-            // Mettre à jour previousUrl uniquement si success est vrai
             if (success) {
                 previousUrl = link;
             }
