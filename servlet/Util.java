@@ -128,7 +128,7 @@ public class Util{
             // boucle pour voir si verb dans VerbAction = verb
             for (VerbAction vbAction : vbActions) {
                 Verb verb = vbAction.getVerb();                        
-                if (link.equals(key) && verbStr.equals(verb.name().toUpperCase())) {
+                if (link.equals(key) ) {    // && verbStr.equals(verb.name().toUpperCase())
                     return link + "/" + mapping.getClassName() + "/" + mapping.getMethodName();
                 }
             }
