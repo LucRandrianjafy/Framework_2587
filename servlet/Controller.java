@@ -8,7 +8,7 @@ import util.*;
 public class Controller{
     int id;
 
-    @Verb.Get
+    @Verb.Get 
     @Url("/controller/test")
     public String testGet() {
         return "Test Result";
