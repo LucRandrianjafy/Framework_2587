@@ -58,7 +58,14 @@ public class Employe{
         return mv;
     }
 
-    
+    @Verb.Get
+    @Url("/controller/emp2")
+    public ModelView test(){
+        String url = "/hello/hello";
+        ModelView mv = new ModelView(url);        
+        return mv;
+    }
+
     @Verb.Get
     @Url("/controller/getEmpName")    
     public String getEmpName(@Validation.NotNull(message = "Username cannot be null") @AnnotationParameter(name = "Employe.name") String name, @Validation.Email(message = "Email is invalid") @AnnotationParameter(name = "Employe.email") String mail, @Validation.NotNull(message = "Age cannot be null") @AnnotationParameter(name = "Employe.age") String age ) {   
@@ -84,6 +91,8 @@ public class Employe{
     public ModelView createSession( MySession session) {          
         int age = 20; 
         session.addAttribute("Luc", age);
+        String role = "admin"; 
+        session.addAttribute("user_role", role);
         return form();  // appel du fonction
     }
 
@@ -96,6 +105,7 @@ public class Employe{
     }
 
     @Verb.Get
+    @Auth(role="admin")
     @Url("/login/verify")
     public ModelView verify( @AnnotationParameter(name = "name") String name, MySession session) {
         int value = 0 ;

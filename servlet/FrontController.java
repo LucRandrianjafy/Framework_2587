@@ -4,6 +4,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 import javax.servlet.*;
 
 import java.net.URL;
@@ -23,6 +24,7 @@ import session.*;
 public class FrontController extends HttpServlet {    
 
     public String controller_package;
+    public String user_role;
     public List<Class<?>> listeController;
     public HashMap<String, Mapping> urlMapping = new HashMap<String, Mapping>();
     public String previousUrl = null;
@@ -35,6 +37,7 @@ public class FrontController extends HttpServlet {
             /**************** Prendre tout les contrôleurs  ****************/
             ServletContext context = config.getServletContext();
             this.controller_package = context.getInitParameter("base_package");     // nom package des contrôleurs dans web.xml         
+            this.user_role = context.getInitParameter("user_role");     // nom package des contrôleurs dans web.xml         
             this.listeController = Util.getControllerClasses(controller_package);                     
 
             /**************** Creation urlMapping  ****************/
@@ -60,22 +63,11 @@ public class FrontController extends HttpServlet {
                         // MAPPING
                         Set<VerbAction> verbActions = new HashSet<>();
                         VerbAction vbAction = new VerbAction();
-                        Verb verb;
+                        Verb verb Verb.getFrom(Verb.Get.class);
 
-                        if (method.getAnnotation(Verb.Get.class) != null) {
-                            verb = Verb.getFrom(Verb.Get.class);
-                            vbAction.add(verb, method);
-                            verbActions.add(vbAction);
-                        } else if (method.getAnnotation(Verb.Post.class) != null) {
-                            verb = Verb.getFrom(Verb.Post.class);
-                            vbAction.add(verb, method);
-                            verbActions.add(vbAction);
-                        } else {
-                            verb = null;
-                        }
-                            
-
-
+                        vbAction.add(verb, method);
+                        verbActions.add(vbAction);
+                        
                         this.urlMapping.put(url, new Mapping(controllerName, methodName, parameterTypes, verbActions));
                         // if (urlMapping.containsKey(url)) {                        
                         //     throw new IllegalArgumentException("Duplicate URL in urlMapping : " + url);
@@ -93,6 +85,13 @@ public class FrontController extends HttpServlet {
 
     protected void processRequest(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         response.setContentType("text/plain");
+
+        HttpSession session = request.getSession(false);
+        String authorization = "";
+        if (session != null) {
+            authorization = (String) session.getAttribute(this.user_role);
+            System.out.println(authorization);
+        }
 
         String url_typed = request.getRequestURL().toString(); // Capturer l'URL actuelle
         boolean success = false; // Indicateur pour gérer la mise à jour de previousUrl
@@ -124,19 +123,22 @@ public class FrontController extends HttpServlet {
                 // Invoquer la méthode cible
                 Object result = maMethode.invoke(instance, params);
 
+                // Throws si non autorise
+                Authorization.checkAuthorization(maMethode, authorization);
+
                 Util.dispatchData(result, response, request, out, maMethode);
 
                 success = true;
             }
         } catch (Exception e) {
             response.getWriter().write(e.getMessage());
+            e.printStackTrace();
         } finally {
             if (success) {
                 previousUrl = link;
             }
         }
     }
-
 
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         processRequest(request, response);
