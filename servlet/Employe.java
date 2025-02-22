@@ -62,11 +62,11 @@ public class Employe{
     @Url("/controller/emp2")
     public ModelView test(){
         String url = "/hello/hello";
-        ModelView mv = new ModelView(url);        
+        ModelView mv = new ModelView(url);
         return mv;
     }
 
-    @Verb.Get
+    @Verb.Post
     @Url("/controller/getEmpName")    
     public String getEmpName(@Validation.NotNull(message = "Username cannot be null") @AnnotationParameter(name = "Employe.name") String name, @Validation.Email(message = "Email is invalid") @AnnotationParameter(name = "Employe.email") String mail, @Validation.NotNull(message = "Age cannot be null") @AnnotationParameter(name = "Employe.age") String age ) {   
         Employe emp = new Employe(name, mail);     
@@ -74,16 +74,6 @@ public class Employe{
         System.out.println(emp.getEmail());
         return emp.getName();
     }
-    
-    // @Verb.Get
-    // @Url("/controller/getEmpName") 
-    // public String getEmpName( @AnnotationParameter(name = "Employe") Employe emp ) {
-    //     System.out.println("emp.getName()" + emp.getName());
-    //     System.out.println("emp.getEmail()" + emp.getEmail());
-    //     System.out.println("emp.getAge()" + emp.getAge());
-    //     return emp.getName();
-    // }
-
 
     /* SESSION */
     @Verb.Get

@@ -63,16 +63,12 @@ public class FrontController extends HttpServlet {
                         // MAPPING
                         Set<VerbAction> verbActions = new HashSet<>();
                         VerbAction vbAction = new VerbAction();
-                        Verb verb Verb.getFrom(Verb.Get.class);
+                        Verb verb = Verb.getFrom(Verb.Get.class);
 
                         vbAction.add(verb, method);
                         verbActions.add(vbAction);
                         
-                        this.urlMapping.put(url, new Mapping(controllerName, methodName, parameterTypes, verbActions));
-                        // if (urlMapping.containsKey(url)) {                        
-                        //     throw new IllegalArgumentException("Duplicate URL in urlMapping : " + url);
-                        // } else {
-                        // }
+                        this.urlMapping.put(url, new Mapping(controllerName, methodName, parameterTypes, verbActions));                        
                     }
 
                     listMethod.clear();
