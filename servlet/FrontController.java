@@ -116,11 +116,12 @@ public class FrontController extends HttpServlet {
                 Object[] params = Util.getMethodParams(maMethode, previousUrl, request, response);
                 System.out.println(previousUrl);
 
+                // Throws si non autorise
+                Authorization.checkAuthorization(maMethode, authorization);
+                
                 // Invoquer la méthode cible
                 Object result = maMethode.invoke(instance, params);
 
-                // Throws si non autorise
-                Authorization.checkAuthorization(maMethode, authorization);
 
                 Util.dispatchData(result, response, request, out, maMethode);
 
